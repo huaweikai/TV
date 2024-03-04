@@ -68,6 +68,17 @@ class BackupViewModel : ViewModel() {
         return result ?: false
     }
 
+    fun autoBackup() {
+        globalScope.launch {
+            val (url, name, password) = Setting.getWebWav()
+            if (url.isBlank() || name.isBlank() || password.isBlank()) {
+                return@launch
+            }
+            backup(url, Authorization(name, password))
+        }
+    }
+
+
     fun backup(webDavUrl: String, authorization: Authorization) {
         globalScope.launch(crash) {
             val backupResult = backupWithResult()

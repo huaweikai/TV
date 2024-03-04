@@ -14,6 +14,7 @@ import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
 import androidx.core.graphics.drawable.IconCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.App;
@@ -29,6 +30,7 @@ import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.event.ServerEvent;
 import com.fongmi.android.tv.impl.Callback;
+import com.fongmi.android.tv.model.BackupViewModel;
 import com.fongmi.android.tv.player.Source;
 import com.fongmi.android.tv.receiver.ShortcutReceiver;
 import com.fongmi.android.tv.server.Server;
@@ -49,6 +51,8 @@ import org.greenrobot.eventbus.ThreadMode;
 
 public class MainActivity extends BaseActivity implements NavigationBarView.OnItemSelectedListener {
 
+    private BackupViewModel backupViewModel;
+
     private ActivityMainBinding mBinding;
     private FragmentStateManager mManager;
     private boolean confirm;
@@ -66,6 +70,7 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        backupViewModel = new ViewModelProvider(this).get(BackupViewModel.class);
         Updater.get().release().start(this);
         initFragment(savedInstanceState);
         Server.get().start();
@@ -235,6 +240,7 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
         LiveConfig.get().clear();
         VodConfig.get().clear();
         AppDatabase.backup();
+        backupViewModel.autoBackup();
         Source.get().exit();
         Server.get().stop();
     }
