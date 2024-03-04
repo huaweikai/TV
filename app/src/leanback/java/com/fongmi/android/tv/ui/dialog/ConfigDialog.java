@@ -12,9 +12,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.FragmentActivity;
 
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.api.ApiConfig;
-import com.fongmi.android.tv.api.LiveConfig;
-import com.fongmi.android.tv.api.WallConfig;
+import com.fongmi.android.tv.api.config.LiveConfig;
+import com.fongmi.android.tv.api.config.VodConfig;
+import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.databinding.DialogConfigBinding;
 import com.fongmi.android.tv.event.ServerEvent;
@@ -23,7 +23,6 @@ import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
 import com.fongmi.android.tv.utils.QRCode;
 import com.fongmi.android.tv.utils.ResUtil;
-import com.fongmi.android.tv.utils.UrlUtil;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.permissionx.guolindev.PermissionX;
 
@@ -80,12 +79,11 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private void initView() {
-        String address = Server.get().getAddress();
         binding.text.setText(url = getUrl());
-        binding.code.setImageBitmap(QRCode.getBitmap(address, 200, 0));
         binding.text.setSelection(TextUtils.isEmpty(url) ? 0 : url.length());
         binding.positive.setText(edit ? R.string.dialog_edit : R.string.dialog_positive);
-        binding.info.setText(ResUtil.getString(R.string.push_info, address).replace("，", "\n"));
+        binding.code.setImageBitmap(QRCode.getBitmap(Server.get().getAddress(3), 200, 0));
+        binding.info.setText(ResUtil.getString(R.string.push_info, Server.get().getAddress()).replace("，", "\n"));
         binding.storage.setVisibility(PermissionX.isGranted(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) ? View.GONE : View.VISIBLE);
     }
 
@@ -109,7 +107,7 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     private String getUrl() {
         switch (type) {
             case 0:
-                return ApiConfig.getUrl();
+                return VodConfig.getUrl();
             case 1:
                 return LiveConfig.getUrl();
             case 2:
@@ -130,6 +128,9 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
         } else if (append && s.equalsIgnoreCase("f")) {
             append = false;
             binding.text.append("ile://");
+        } else if (append && s.equalsIgnoreCase("a")) {
+            append = false;
+            binding.text.append("ssets://");
         } else if (s.length() > 1) {
             append = false;
         } else if (s.length() == 0) {
@@ -138,10 +139,12 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private void onPositive(View view) {
-        String text = UrlUtil.fixUrl(binding.text.getText().toString().trim());
+        String name = binding.name.getText().toString().trim();
+        String text = binding.text.getText().toString().trim();
         if (edit) Config.find(url, type).url(text).update();
         if (text.isEmpty()) Config.delete(url, type);
-        callback.setConfig(Config.find(text, type));
+        if (name.isEmpty()) callback.setConfig(Config.find(text, type));
+        else callback.setConfig(Config.find(text, name, type));
         dialog.dismiss();
     }
 
@@ -151,7 +154,8 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onServerEvent(ServerEvent event) {
-        if (event.getType() != ServerEvent.Type.API) return;
+        if (event.getType() != ServerEvent.Type.SETTING) return;
+        binding.name.setText(event.getName());
         binding.text.setText(event.getText());
         binding.text.setSelection(binding.text.getText().length());
     }

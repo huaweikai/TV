@@ -16,12 +16,14 @@ import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Device;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Keep;
+import com.fongmi.android.tv.bean.Live;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.db.dao.ConfigDao;
 import com.fongmi.android.tv.db.dao.DeviceDao;
 import com.fongmi.android.tv.db.dao.HistoryDao;
 import com.fongmi.android.tv.db.dao.KeepDao;
+import com.fongmi.android.tv.db.dao.LiveDao;
 import com.fongmi.android.tv.db.dao.SiteDao;
 import com.fongmi.android.tv.db.dao.TrackDao;
 import com.fongmi.android.tv.utils.ResUtil;
@@ -33,10 +35,10 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
-@Database(entities = {Keep.class, Site.class, Track.class, Config.class, Device.class, History.class}, version = AppDatabase.VERSION)
+@Database(entities = {Keep.class, Site.class, Live.class, Track.class, Config.class, Device.class, History.class}, version = AppDatabase.VERSION)
 public abstract class AppDatabase extends RoomDatabase {
 
-    public static final int VERSION = 26;
+    public static final int VERSION = 29;
     public static final String NAME = "tv";
     public static final String SYMBOL = "@@@";
 
@@ -47,13 +49,12 @@ public abstract class AppDatabase extends RoomDatabase {
         return instance;
     }
 
-    public static String getDate() {
-        File db = new File(Path.tv(), NAME);
-        return Setting.isBackupAuto() ? ResUtil.getString(R.string.setting_backup_auto) : getBackupKey().exists() && db.exists() ? Util.format(new SimpleDateFormat("MMddHHmmss", Locale.getDefault()), db.lastModified()) : "";
+    public static File getBackup() {
+        return new File(Path.tv(), NAME);
     }
 
-    public static File getBackupKey() {
-        return new File(Path.tv(), "." + Util.getDeviceId());
+    public static String getDate() {
+        return Setting.isBackupAuto() ? ResUtil.getString(R.string.setting_backup_auto) : getBackup().exists() ? Util.format(new SimpleDateFormat("MMddHHmmss", Locale.getDefault()), getBackup().lastModified()) : "";
     }
 
     public static void backup() {
@@ -69,7 +70,6 @@ public abstract class AppDatabase extends RoomDatabase {
             if (wal.exists()) Path.copy(wal, new File(Path.tv(), wal.getName()));
             if (shm.exists()) Path.copy(shm, new File(Path.tv(), shm.getName()));
             Prefers.backup(new File(Path.tv(), NAME + "-pref"));
-            Path.newFile(getBackupKey());
             App.post(callback::success);
         });
     }
@@ -80,12 +80,11 @@ public abstract class AppDatabase extends RoomDatabase {
             File wal = new File(Path.tv(), NAME + "-wal");
             File shm = new File(Path.tv(), NAME + "-shm");
             File pref = new File(Path.tv(), NAME + "-pref");
-            if (db.exists()) Path.move(db, App.get().getDatabasePath(db.getName()).getAbsoluteFile());
-            if (wal.exists()) Path.move(wal, App.get().getDatabasePath(wal.getName()).getAbsoluteFile());
-            if (shm.exists()) Path.move(shm, App.get().getDatabasePath(shm.getName()).getAbsoluteFile());
+            if (db.exists()) Path.copy(db, App.get().getDatabasePath(db.getName()).getAbsoluteFile());
+            if (wal.exists()) Path.copy(wal, App.get().getDatabasePath(wal.getName()).getAbsoluteFile());
+            if (shm.exists()) Path.copy(shm, App.get().getDatabasePath(shm.getName()).getAbsoluteFile());
             if (pref.exists()) Prefers.restore(pref);
             App.post(callback::success);
-            Path.clear(Path.tv());
         });
     }
 
@@ -106,14 +105,17 @@ public abstract class AppDatabase extends RoomDatabase {
                 .addMigrations(MIGRATION_23_24)
                 .addMigrations(MIGRATION_24_25)
                 .addMigrations(MIGRATION_25_26)
-                .allowMainThreadQueries()
-                .fallbackToDestructiveMigration()
-                .build();
+                .addMigrations(MIGRATION_26_27)
+                .addMigrations(MIGRATION_27_28)
+                .addMigrations(MIGRATION_28_29)
+                .allowMainThreadQueries().fallbackToDestructiveMigration().build();
     }
 
     public abstract KeepDao getKeepDao();
 
     public abstract SiteDao getSiteDao();
+
+    public abstract LiveDao getLiveDao();
 
     public abstract TrackDao getTrackDao();
 
@@ -233,6 +235,30 @@ public abstract class AppDatabase extends RoomDatabase {
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("CREATE TABLE Site_Backup (`key` TEXT NOT NULL, name TEXT, searchable INTEGER, changeable INTEGER, recordable INTEGER, PRIMARY KEY (`key`))");
             database.execSQL("INSERT INTO Site_Backup SELECT `key`, name, searchable, changeable, recordable FROM Site");
+            database.execSQL("DROP TABLE Site");
+            database.execSQL("ALTER TABLE Site_Backup RENAME to Site");
+        }
+    };
+
+    static final Migration MIGRATION_26_27 = new Migration(26, 27) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `Live` (`name` TEXT NOT NULL, `boot` INTEGER NOT NULL, `pass` INTEGER NOT NULL, PRIMARY KEY(`name`))");
+        }
+    };
+
+    static final Migration MIGRATION_27_28 = new Migration(27, 28) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            Prefers.remove("danmu_size");
+        }
+    };
+
+    static final Migration MIGRATION_28_29 = new Migration(28, 29) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE Site_Backup (`key` TEXT NOT NULL, searchable INTEGER, changeable INTEGER, PRIMARY KEY (`key`))");
+            database.execSQL("INSERT INTO Site_Backup SELECT `key`, searchable, changeable FROM Site");
             database.execSQL("DROP TABLE Site");
             database.execSQL("ALTER TABLE Site_Backup RENAME to Site");
         }

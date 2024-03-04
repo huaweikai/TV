@@ -1,12 +1,15 @@
 package com.fongmi.android.tv.utils;
 
 import android.app.Activity;
+import android.app.UiModeManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Parcelable;
@@ -74,7 +77,7 @@ public class Util {
     public static int getDigit(String text) {
         try {
             if (text.startsWith("上") || text.startsWith("下")) return -1;
-            return Integer.parseInt(text.replaceAll("(mp4|H264|H265|720p|1080p|2160p|4k|4K)", "").replaceAll("\\D+", ""));
+            return Integer.parseInt(text.replaceAll("(?i)(mp4|H264|H265|720p|1080p|2160p|4K)", "").replaceAll("\\D+", ""));
         } catch (Exception e) {
             return -1;
         }
@@ -137,4 +140,37 @@ public class Util {
             return Intent.createChooser(intent, null);
         }
     }
+
+    public static boolean hasSAFChooser() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("video/*");
+        return intent.resolveActivity(App.get().getPackageManager()) != null;
+    }
+
+    public static boolean isTvBox() {
+        PackageManager pm = App.get().getPackageManager();
+        if (Configuration.UI_MODE_TYPE_TELEVISION == ((UiModeManager) App.get().getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType()) {
+            return true;
+        }
+        if (pm.hasSystemFeature("amazon.hardware.fire_tv")) {
+            return true;
+        }
+        if (!hasSAFChooser()) {
+            return true;
+        }
+        if (Build.VERSION.SDK_INT < 30) {
+            if (!pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {
+                return true;
+            }
+            if (pm.hasSystemFeature("android.hardware.hdmi.cec")) {
+                return true;
+            }
+            if (Build.MANUFACTURER.equalsIgnoreCase("zidoo")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

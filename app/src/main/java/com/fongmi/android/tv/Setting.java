@@ -91,12 +91,12 @@ public class Setting {
         Prefers.put("player_live", player);
     }
 
-    public static int getDecode() {
-        return Prefers.getInt("decode", Players.HARD);
+    public static int getDecode(int player) {
+        return Prefers.getInt("decode_" + player, Players.HARD);
     }
 
-    public static void putDecode(int decode) {
-        Prefers.put("decode", decode);
+    public static void putDecode(int player, int decode) {
+        Prefers.put("decode_" + player, decode);
     }
 
     public static int getRender() {
@@ -148,7 +148,7 @@ public class Setting {
     }
 
     public static int getSubtitle() {
-        return Math.max(Prefers.getInt("subtitle", 16), 14);
+        return Math.min(Math.max(Prefers.getInt("subtitle", 16), 14), 48);
     }
 
     public static void putSubtitle(int subtitle) {
@@ -175,8 +175,16 @@ public class Setting {
         return Prefers.getInt("flag");
     }
 
-    public static void putFlag(int mode) {
-        Prefers.put("flag", mode);
+    public static void putFlag(int flag) {
+        Prefers.put("flag", flag);
+    }
+
+    public static int getEpisode() {
+        return Prefers.getInt("episode");
+    }
+
+    public static void putEpisode(int episode) {
+        Prefers.put("episode", episode);
     }
 
     public static int getBackground() {
@@ -243,6 +251,54 @@ public class Setting {
         Prefers.put("danmu", danmu);
     }
 
+    public static boolean isDanmuLoad() {
+        return Prefers.getBoolean("danmu_load", true);
+    }
+
+    public static void putDanmuLoad(boolean load) {
+        Prefers.put("danmu_load", load);
+    }
+
+    public static int getDanmuSpeed() {
+        return Math.min(Math.max(Prefers.getInt("danmu_speed", 2), 0), 3);
+    }
+
+    public static void putDanmuSpeed(int speed) {
+        Prefers.put("danmu_speed", speed);
+    }
+
+    public static float getDanmuSize() {
+        return Math.min(Math.max(Prefers.getFloat("danmu_size", 1.0f), 0.6f), 2.0f);
+    }
+
+    public static void putDanmuSize(float size) {
+        Prefers.put("danmu_size", size);
+    }
+
+    public static int getDanmuLine(int line) {
+        return Math.min(Math.max(Prefers.getInt("danmu_line", line), 1), 15);
+    }
+
+    public static void putDanmuLine(int line) {
+        Prefers.put("danmu_line", line);
+    }
+
+    public static int getDanmuAlpha() {
+        return Math.min(Math.max(Prefers.getInt("danmu_alpha", 90), 10), 100);
+    }
+
+    public static void putDanmuSync(boolean sync) {
+        Prefers.put("danmu_sync", sync);
+    }
+
+    public static boolean isDanmuSync() {
+        return Prefers.getBoolean("danmu_sync", false);
+    }
+
+    public static void putDanmuAlpha(int alpha) {
+        Prefers.put("danmu_alpha", alpha);
+    }
+
     public static boolean isCaption() {
         return Prefers.getBoolean("caption");
     }
@@ -276,7 +332,7 @@ public class Setting {
     }
 
     public static boolean isBackgroundOn() {
-        return getBackground() == 1;
+        return getBackground() == 1 || getBackground() == 2;
     }
 
     public static boolean isBackgroundPiP() {
@@ -286,6 +342,103 @@ public class Setting {
     public static boolean hasCaption() {
         return new Intent(Settings.ACTION_CAPTIONING_SETTINGS).resolveActivity(App.get().getPackageManager()) != null;
     }
+
+    public static boolean isDisplayTime() {
+        return Prefers.getBoolean("display_time", false);
+    }
+
+    public static void putDisplayTime(boolean display) {
+        Prefers.put("display_time", display);
+    }
+
+    public static boolean isDisplaySpeed() {
+        return Prefers.getBoolean("display_speed", false);
+    }
+
+    public static void putDisplaySpeed(boolean display) {
+        Prefers.put("display_speed", display);
+    }
+
+    public static boolean isDisplayDuration() {
+        return Prefers.getBoolean("display_duration", false);
+    }
+
+    public static void putDisplayDuration(boolean display) {
+        Prefers.put("display_duration", display);
+    }
+
+    public static boolean isDisplayMiniProgress() {
+        return Prefers.getBoolean("display_mini_progress", false);
+    }
+
+    public static void putDisplayMiniProgress(boolean display) {
+        Prefers.put("display_mini_progress", display);
+    }
+
+    public static float getPlaySpeed() {
+        return Prefers.getFloat("play_speed", 1.0f);
+    }
+
+    public static void putPlaySpeed(float speed) {
+        Prefers.put("play_speed", speed);
+    }
+
+    public static void putFullscreenMenuKey(int key) {
+        Prefers.put("fullscreen_menu_key", key);
+    }
+
+    public static int getFullscreenMenuKey() {
+        return Prefers.getInt("fullscreen_menu_key", 0);
+    }
+
+    public static void putHomeMenuKey(int key) {
+        Prefers.put("home_menu_key", key);
+    }
+
+    public static int getHomeMenuKey() {
+        return Prefers.getInt("home_menu_key", 0);
+    }
+
+    public static boolean isHomeSiteLock() {
+        return Prefers.getBoolean("home_site_lock", false);
+    }
+
+    public static void putHomeSiteLock(boolean lock) {
+        Prefers.put("home_site_lock", lock);
+    }
+
+    public static boolean isIncognito() {
+        return Prefers.getBoolean("incognito");
+    }
+
+    public static void putIncognito(boolean incognito) {
+        Prefers.put("incognito", incognito);
+    }
+
+    public static void putSmallWindowBackKey(int key) {
+        Prefers.put("small_window_back_key", key);
+    }
+
+    public static int getSmallWindowBackKey() {
+        return Prefers.getInt("small_window_back_key", 0);
+    }
+
+    public static void putHomeChangeConfig(boolean change) {
+        Prefers.put("home_change_config", change);
+    }
+
+    public static boolean isHomeChangeConfig() {
+        return Prefers.getBoolean("home_change_config", false);
+    }
+
+    public static boolean isAggregatedSearch() {
+        return Prefers.getBoolean("aggregated_search", false);
+    }
+
+    public static void putAggregatedSearch(boolean search) {
+        Prefers.put("aggregated_search", search);
+    }
+
 
     public static Triple<String, String, String> getWebWav() {
         String url = Prefers.getString("web_dav_url");

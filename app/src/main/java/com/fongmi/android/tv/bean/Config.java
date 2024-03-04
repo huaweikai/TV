@@ -8,6 +8,7 @@ import androidx.room.PrimaryKey;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.db.AppDatabase;
+import com.github.catvod.utils.Prefers;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 
@@ -171,7 +172,8 @@ public class Config {
     }
 
     public static void delete(String url, int type) {
-        AppDatabase.get().getConfigDao().delete(url, type);
+        if (type == 2) AppDatabase.get().getConfigDao().delete(type);
+        else AppDatabase.get().getConfigDao().delete(url, type);
     }
 
     public static Config vod() {
@@ -219,11 +221,17 @@ public class Config {
         return this;
     }
 
+    public Config save() {
+        if (isEmpty()) return this;
+        AppDatabase.get().getConfigDao().update(this);
+        return this;
+    }
+
     public Config update() {
         if (isEmpty()) return this;
         setTime(System.currentTimeMillis());
-        AppDatabase.get().getConfigDao().update(this);
-        return this;
+        Prefers.put("config_" + getType(), getUrl());
+        return save();
     }
 
     public void delete() {

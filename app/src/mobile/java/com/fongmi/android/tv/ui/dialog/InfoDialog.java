@@ -1,7 +1,8 @@
 package com.fongmi.android.tv.ui.dialog;
 
 import android.app.Activity;
-import android.content.Intent;
+import android.net.Uri;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -18,7 +19,7 @@ import java.util.Map;
 public class InfoDialog {
 
     private final DialogInfoBinding binding;
-    private final Activity activity;
+    private final Listener callback;
     private AlertDialog dialog;
     private CharSequence title;
     private String header;
@@ -29,7 +30,8 @@ public class InfoDialog {
     }
 
     public InfoDialog(Activity activity) {
-        this.binding = DialogInfoBinding.inflate(LayoutInflater.from(this.activity = activity));
+        this.binding = DialogInfoBinding.inflate(LayoutInflater.from(activity));
+        this.callback = (Listener) activity;
     }
 
     public InfoDialog title(CharSequence title) {
@@ -65,28 +67,33 @@ public class InfoDialog {
         binding.url.setText(url);
         binding.title.setText(title);
         binding.header.setText(header);
-        binding.header.setVisibility(header.isEmpty() ? View.GONE : View.VISIBLE);
+        binding.url.setVisibility(TextUtils.isEmpty(url) ? View.GONE : View.VISIBLE);
+        binding.header.setVisibility(TextUtils.isEmpty(header) ? View.GONE : View.VISIBLE);
     }
 
     private void initEvent() {
         binding.url.setOnClickListener(this::onShare);
-        binding.url.setOnLongClickListener(this::onCopy);
+        binding.url.setOnLongClickListener(v -> onCopy(url));
+        binding.header.setOnLongClickListener(v -> onCopy(header));
     }
 
     private void onShare(View view) {
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtra(Intent.EXTRA_TEXT, url);
-        intent.putExtra("name", title);
-        intent.putExtra("title", title);
-        intent.setType("text/plain");
-        activity.startActivity(Util.getChooser(intent));
+        callback.onShare(title, convert(url));
         dialog.dismiss();
     }
 
-    private boolean onCopy(View view) {
+    private boolean onCopy(String text) {
         Notify.show(R.string.copied);
-        Util.copy(url);
+        Util.copy(text);
         return true;
+    }
+
+    private String convert(String url) {
+        return url.startsWith("http://127.0.0.1:7777") ? Uri.parse(url).getQueryParameter("url") : url;
+    }
+
+    public interface Listener {
+
+        void onShare(CharSequence title, String url);
     }
 }

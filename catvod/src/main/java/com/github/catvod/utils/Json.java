@@ -1,5 +1,7 @@
 package com.github.catvod.utils;
 
+import androidx.collection.ArrayMap;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -12,6 +14,14 @@ import java.util.List;
 import java.util.Map;
 
 public class Json {
+
+    public static JsonElement parse(String json) {
+        try {
+            return JsonParser.parseString(json);
+        } catch (Throwable e) {
+            return new JsonParser().parse(json);
+        }
+    }
 
     public static boolean valid(String text) {
         try {
@@ -52,7 +62,7 @@ public class Json {
 
     public static JsonObject safeObject(JsonElement element) {
         try {
-            if (element.isJsonPrimitive()) element = JsonParser.parseString(element.getAsJsonPrimitive().getAsString());
+            if (element.isJsonPrimitive()) element = parse(element.getAsJsonPrimitive().getAsString());
             return element.getAsJsonObject();
         } catch (Exception e) {
             return new JsonObject();
@@ -62,7 +72,20 @@ public class Json {
     public static Map<String, String> toMap(JsonElement element) {
         Map<String, String> map = new HashMap<>();
         JsonObject object = safeObject(element);
-        for (String key : object.keySet()) map.put(key, safeString(object, key));
+        for (Map.Entry<String, JsonElement> entry : object.entrySet()) map.put(entry.getKey(), safeString(object, entry.getKey()));
         return map;
+    }
+
+    public static ArrayMap<String, String> toArrayMap(JsonElement element) {
+        ArrayMap<String, String> map = new ArrayMap<>();
+        JsonObject object = safeObject(element);
+        for (Map.Entry<String, JsonElement> entry : object.entrySet()) map.put(entry.getKey(), safeString(object, entry.getKey()));
+        return map;
+    }
+
+    public static JsonObject toObject(Map<String, String> map) {
+        JsonObject object = new JsonObject();
+        for (String key : map.keySet()) object.addProperty(key, map.get(key));
+        return object;
     }
 }

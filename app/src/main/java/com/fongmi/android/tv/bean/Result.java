@@ -45,36 +45,41 @@ public class Result implements Parcelable {
     @SerializedName("filters")
     @JsonAdapter(FilterAdapter.class)
     private LinkedHashMap<String, List<Filter>> filters;
+
+    @SerializedName("url")
+    @JsonAdapter(UrlAdapter.class)
+    private Url url;
+
+    @SerializedName("msg")
+    @JsonAdapter(MsgAdapter.class)
+    private String msg;
+
+    @SerializedName("subs")
+    private List<Sub> subs;
     @SerializedName("header")
     private JsonElement header;
     @SerializedName("playUrl")
     private String playUrl;
     @SerializedName("jxFrom")
     private String jxFrom;
-    @SerializedName("parse")
-    private Integer parse;
-    @SerializedName("jx")
-    private Integer jx;
     @SerializedName("flag")
     private String flag;
     @SerializedName("danmaku")
     private String danmaku;
     @SerializedName("format")
     private String format;
-    @SerializedName("url")
-    @JsonAdapter(UrlAdapter.class)
-    private Url url;
+    @SerializedName("click")
+    private String click;
     @SerializedName("key")
     private String key;
-    @SerializedName("subs")
-    private List<Sub> subs;
     @SerializedName("pagecount")
     private Integer pagecount;
+    @SerializedName("parse")
+    private Integer parse;
     @SerializedName("code")
     private Integer code;
-    @JsonAdapter(MsgAdapter.class)
-    @SerializedName("msg")
-    private String msg;
+    @SerializedName("jx")
+    private Integer jx;
 
     public static Result objectFrom(String str) {
         try {
@@ -121,13 +126,13 @@ public class Result implements Parcelable {
         type.setTypeFlag("1");
         type.setTypeId(item.getVodId());
         type.setTypeName(item.getVodName());
-        result.setTypes(List.of(type));
+        result.setTypes(Arrays.asList(type));
         return result;
     }
 
     public static Result type(String json) {
         Result result = new Result();
-        result.setTypes(List.of(Class.objectFrom(json)));
+        result.setTypes(Arrays.asList(Class.objectFrom(json)));
         return result.trans();
     }
 
@@ -164,6 +169,30 @@ public class Result implements Parcelable {
         return filters == null ? new LinkedHashMap<>() : filters;
     }
 
+    public Url getUrl() {
+        return url == null ? Url.create() : url;
+    }
+
+    public void setUrl(Url url) {
+        this.url = url;
+    }
+
+    public void setUrl(String url) {
+        this.url = getUrl().replace(url);
+    }
+
+    public String getMsg() {
+        return TextUtils.isEmpty(msg) || getCode() != 0 ? "" : msg;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+
+    public List<Sub> getSubs() {
+        return subs == null ? new ArrayList<>() : subs;
+    }
+
     public JsonElement getHeader() {
         return header;
     }
@@ -184,20 +213,12 @@ public class Result implements Parcelable {
         return TextUtils.isEmpty(jxFrom) ? "" : jxFrom;
     }
 
-    public Integer getParse() {
-        return getParse(0);
+    public String getFlag() {
+        return TextUtils.isEmpty(flag) ? "" : flag;
     }
 
-    public Integer getParse(Integer def) {
-        return parse == null ? def : parse;
-    }
-
-    public void setParse(Integer parse) {
-        this.parse = parse;
-    }
-
-    public Integer getJx() {
-        return jx == null ? 0 : jx;
+    public void setFlag(String flag) {
+        this.flag = flag;
     }
 
     public String getDanmaku() {
@@ -212,24 +233,12 @@ public class Result implements Parcelable {
         return format;
     }
 
-    public String getFlag() {
-        return TextUtils.isEmpty(flag) ? "" : flag;
+    public String getClick() {
+        return TextUtils.isEmpty(click) ? "" : click;
     }
 
-    public void setFlag(String flag) {
-        this.flag = flag;
-    }
-
-    public Url getUrl() {
-        return url == null ? Url.create() : url;
-    }
-
-    public void setUrl(Url url) {
-        this.url = url;
-    }
-
-    public void setUrl(String url) {
-        this.url = getUrl().replace(url);
+    public void setClick(String click) {
+        this.click = click;
     }
 
     public String getKey() {
@@ -240,24 +249,28 @@ public class Result implements Parcelable {
         this.key = key;
     }
 
-    public List<Sub> getSubs() {
-        return subs == null ? new ArrayList<>() : subs;
-    }
-
     public Integer getPageCount() {
         return pagecount == null ? 0 : pagecount;
+    }
+
+    public Integer getParse(Integer def) {
+        return parse == null ? def : parse;
+    }
+
+    public Integer getParse() {
+        return getParse(0);
+    }
+
+    public void setParse(Integer parse) {
+        this.parse = parse;
     }
 
     public Integer getCode() {
         return code == null ? 0 : code;
     }
 
-    public String getMsg() {
-        return TextUtils.isEmpty(msg) || getCode() != 0 ? "" : msg;
-    }
-
-    public void setMsg(String msg) {
-        this.msg = msg;
+    public Integer getJx() {
+        return jx == null ? 0 : jx;
     }
 
     public boolean hasMsg() {

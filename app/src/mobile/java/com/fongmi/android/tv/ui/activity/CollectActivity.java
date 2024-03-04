@@ -18,12 +18,13 @@ import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Setting;
-import com.fongmi.android.tv.api.ApiConfig;
+import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Collect;
 import com.fongmi.android.tv.bean.Hot;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Suggest;
+import com.fongmi.android.tv.bean.SuggestTwo;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.ActivityCollectBinding;
 import com.fongmi.android.tv.impl.Callback;
@@ -173,8 +174,8 @@ public class CollectActivity extends BaseActivity implements CustomScroller.Call
     }
 
     private void setSite() {
-        for (Site site : ApiConfig.get().getSites()) if (site.isSearchable()) mSites.add(site);
-        Site home = ApiConfig.get().getHome();
+        for (Site site : VodConfig.get().getSites()) if (site.isSearchable()) mSites.add(site);
+        Site home = VodConfig.get().getHome();
         if (!mSites.contains(home)) return;
         mSites.remove(home);
         mSites.add(0, home);
@@ -210,12 +211,21 @@ public class CollectActivity extends BaseActivity implements CustomScroller.Call
 
     private void getSuggest(String text) {
         mBinding.word.setText(R.string.search_suggest);
+        mWordAdapter.clear();
+        OkHttp.newCall("https://tv.aiseet.atianqi.com/i-tvbin/qtv_video/search/get_search_smart_box?format=json&page_num=0&page_size=20&key=" + text).enqueue(new Callback() {
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (mBinding.keyword.getText().toString().trim().isEmpty()) return;
+                List<String> items = SuggestTwo.get(response.body().string());
+                App.post(() -> mWordAdapter.appendAll(items));
+            }
+        });
         OkHttp.newCall("https://suggest.video.iqiyi.com/?if=mobile&key=" + text).enqueue(new Callback() {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (mBinding.keyword.getText().toString().trim().isEmpty()) return;
                 List<String> items = Suggest.get(response.body().string());
-                App.post(() -> mWordAdapter.addAll(items));
+                App.post(() -> mWordAdapter.appendAll(items), 200);
             }
         });
     }

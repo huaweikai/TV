@@ -61,11 +61,10 @@ public class UaDialog implements DialogInterface.OnDismissListener {
 
     private void initView() {
         String text = Setting.getUa();
-        String address = Server.get().getAddress();
         binding.text.setText(text);
-        binding.code.setImageBitmap(QRCode.getBitmap(address, 200, 0));
         binding.text.setSelection(TextUtils.isEmpty(text) ? 0 : text.length());
-        binding.info.setText(ResUtil.getString(R.string.push_info, address).replace("，", "\n"));
+        binding.code.setImageBitmap(QRCode.getBitmap(Server.get().getAddress(3), 200, 0));
+        binding.info.setText(ResUtil.getString(R.string.push_info, Server.get().getAddress()).replace("，", "\n"));
     }
 
     private void initEvent() {
@@ -109,7 +108,7 @@ public class UaDialog implements DialogInterface.OnDismissListener {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onServerEvent(ServerEvent event) {
-        if (event.getType() != ServerEvent.Type.API) return;
+        if (event.getType() != ServerEvent.Type.SETTING) return;
         binding.text.setText(event.getText());
         binding.positive.performClick();
     }

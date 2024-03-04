@@ -46,6 +46,13 @@
         android:layout_height="match_parent" />
 
     <include
+        android:id="@+id/display"
+        layout="@layout/view_widget_display"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <include
         android:id="@+id/control"
         layout="@layout/view_control_live"
         android:layout_width="match_parent"
@@ -78,7 +85,7 @@
 
         <com.fongmi.android.tv.ui.custom.CustomLiveListView
             android:id="@+id/channel"
-            android:layout_width="260dp"
+            android:layout_width="280dp"
             android:layout_height="match_parent"
             tools:itemCount="5"
             tools:listitem="@layout/adapter_channel" />

@@ -21,9 +21,17 @@ public class Rule {
     private List<String> hosts;
     @SerializedName("regex")
     private List<String> regex;
+    @SerializedName("script")
+    private List<String> script;
+    @SerializedName("exclude")
+    private List<String> exclude;
 
     public static Rule create(String name) {
         return new Rule(name);
+    }
+
+    public static Rule empty() {
+        return new Rule("");
     }
 
     public Rule(String name) {
@@ -46,6 +54,14 @@ public class Rule {
 
     public List<String> getRegex() {
         return regex == null ? Collections.emptyList() : regex;
+    }
+
+    public List<String> getScript() {
+        return script == null ? Collections.emptyList() : script;
+    }
+
+    public List<String> getExclude() {
+        return exclude == null ? Collections.emptyList() : exclude;
     }
 
     @Override

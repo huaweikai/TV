@@ -8,12 +8,11 @@ import android.view.View;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.BuildConfig;
-import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.Updater;
-import com.fongmi.android.tv.api.ApiConfig;
-import com.fongmi.android.tv.api.LiveConfig;
-import com.fongmi.android.tv.api.WallConfig;
+import com.fongmi.android.tv.api.config.LiveConfig;
+import com.fongmi.android.tv.api.config.VodConfig;
+import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Live;
 import com.fongmi.android.tv.bean.Site;
@@ -36,7 +35,6 @@ import com.fongmi.android.tv.ui.dialog.ProxyDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
 import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Notify;
-import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.bean.Doh;
 import com.github.catvod.net.OkHttp;
@@ -48,12 +46,6 @@ import java.util.List;
 public class SettingActivity extends BaseActivity implements ConfigCallback, SiteCallback, LiveCallback, DohCallback, ProxyCallback {
 
     private ActivitySettingBinding mBinding;
-    private String[] quality;
-    private String[] render;
-    private String[] decode;
-    private String[] player;
-    private String[] scale;
-    private String[] size;
     private int type;
 
     public static void start(Activity activity) {
@@ -61,12 +53,12 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
     }
 
     private int getDohIndex() {
-        return Math.max(0, ApiConfig.get().getDoh().indexOf(Doh.objectFrom(Setting.getDoh())));
+        return Math.max(0, VodConfig.get().getDoh().indexOf(Doh.objectFrom(Setting.getDoh())));
     }
 
     private String[] getDohList() {
         List<String> list = new ArrayList<>();
-        for (Doh item : ApiConfig.get().getDoh()) list.add(item.getName());
+        for (Doh item : VodConfig.get().getDoh()) list.add(item.getName());
         return list.toArray(new String[0]);
     }
 
@@ -77,19 +69,14 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
 
     @Override
     protected void initView() {
-        mBinding.vodUrl.setText(ApiConfig.getDesc());
+        mBinding.vod.requestFocus();
+        mBinding.vodUrl.setText(VodConfig.getDesc());
         mBinding.liveUrl.setText(LiveConfig.getDesc());
         mBinding.wallUrl.setText(WallConfig.getDesc());
         mBinding.backupText.setText(AppDatabase.getDate());
         mBinding.dohText.setText(getDohList()[getDohIndex()]);
         mBinding.versionText.setText(BuildConfig.VERSION_NAME);
         mBinding.proxyText.setText(UrlUtil.scheme(Setting.getProxy()));
-        mBinding.sizeText.setText((size = ResUtil.getStringArray(R.array.select_size))[Setting.getSize()]);
-        mBinding.scaleText.setText((scale = ResUtil.getStringArray(R.array.select_scale))[Setting.getScale()]);
-        mBinding.playerText.setText((player = ResUtil.getStringArray(R.array.select_player))[Setting.getPlayer()]);
-        mBinding.decodeText.setText((decode = ResUtil.getStringArray(R.array.select_decode))[Setting.getDecode()]);
-        mBinding.renderText.setText((render = ResUtil.getStringArray(R.array.select_render))[Setting.getRender()]);
-        mBinding.qualityText.setText((quality = ResUtil.getStringArray(R.array.select_quality))[Setting.getQuality()]);
         setCacheText();
     }
 
@@ -110,24 +97,21 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         mBinding.proxy.setOnClickListener(this::onProxy);
         mBinding.cache.setOnClickListener(this::onCache);
         mBinding.backup.setOnClickListener(this::onBackup);
+        mBinding.player.setOnClickListener(this::onPlayer);
+        mBinding.danmu.setOnClickListener(this::onDanmu);
         mBinding.version.setOnClickListener(this::onVersion);
         mBinding.vod.setOnLongClickListener(this::onVodEdit);
         mBinding.vodHome.setOnClickListener(this::onVodHome);
         mBinding.live.setOnLongClickListener(this::onLiveEdit);
         mBinding.liveHome.setOnClickListener(this::onLiveHome);
+        mBinding.wall.setOnLongClickListener(this::onWallEdit);
         mBinding.backup.setOnLongClickListener(this::onBackupAuto);
         mBinding.vodHistory.setOnClickListener(this::onVodHistory);
         mBinding.version.setOnLongClickListener(this::onVersionDev);
         mBinding.liveHistory.setOnClickListener(this::onLiveHistory);
-        mBinding.player.setOnLongClickListener(this::onPlayerSetting);
         mBinding.wallDefault.setOnClickListener(this::setWallDefault);
         mBinding.wallRefresh.setOnClickListener(this::setWallRefresh);
-        mBinding.quality.setOnClickListener(this::setQuality);
-        mBinding.player.setOnClickListener(this::setPlayer);
-        mBinding.decode.setOnClickListener(this::setDecode);
-        mBinding.render.setOnClickListener(this::setRender);
-        mBinding.scale.setOnClickListener(this::setScale);
-        mBinding.size.setOnClickListener(this::setSize);
+        mBinding.custom.setOnClickListener(this::onCustom);
         mBinding.doh.setOnClickListener(this::setDoh);
     }
 
@@ -144,7 +128,7 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         switch (config.getType()) {
             case 0:
                 Notify.progress(this);
-                ApiConfig.load(config, getCallback());
+                VodConfig.load(config, getCallback());
                 mBinding.vodUrl.setText(config.getDesc());
                 break;
             case 1:
@@ -182,26 +166,26 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
                 Notify.dismiss();
                 RefreshEvent.video();
                 RefreshEvent.history();
-                mBinding.vodUrl.setText(ApiConfig.getDesc());
+                mBinding.vodUrl.setText(VodConfig.getDesc());
                 mBinding.liveUrl.setText(LiveConfig.getDesc());
                 mBinding.wallUrl.setText(WallConfig.getDesc());
                 break;
             case 1:
                 setCacheText();
                 Notify.dismiss();
-                mBinding.liveUrl.setText(LiveConfig.getUrl());
+                mBinding.liveUrl.setText(LiveConfig.getDesc());
                 break;
             case 2:
                 setCacheText();
                 Notify.dismiss();
-                mBinding.wallUrl.setText(WallConfig.getUrl());
+                mBinding.wallUrl.setText(WallConfig.getDesc());
                 break;
         }
     }
 
     @Override
     public void setSite(Site item) {
-        ApiConfig.get().setHome(item);
+        VodConfig.get().setHome(item);
         RefreshEvent.video();
     }
 
@@ -236,12 +220,17 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         return true;
     }
 
+    private boolean onWallEdit(View view) {
+        ConfigDialog.create(this).type(type = 2).edit().show();
+        return true;
+    }
+
     private void onVodHome(View view) {
         SiteDialog.create(this).action().show();
     }
 
     private void onLiveHome(View view) {
-        LiveDialog.create(this).show();
+        LiveDialog.create(this).action().show();
     }
 
     private void onVodHistory(View view) {
@@ -252,9 +241,12 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         HistoryDialog.create(this).type(type = 1).show();
     }
 
-    private boolean onPlayerSetting(View view) {
+    private void onPlayer(View view) {
         SettingPlayerActivity.start(this);
-        return true;
+    }
+
+    private void onDanmu(View view) {
+        SettingDanmuActivity.start(this);
     }
 
     private void onVersion(View view) {
@@ -281,42 +273,8 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         });
     }
 
-    private void setQuality(View view) {
-        int index = Setting.getQuality();
-        Setting.putQuality(index = index == quality.length - 1 ? 0 : ++index);
-        mBinding.qualityText.setText(quality[index]);
-        RefreshEvent.image();
-    }
-
-    private void setPlayer(View view) {
-        int index = Setting.getPlayer();
-        Setting.putPlayer(index = index == player.length - 1 ? 0 : ++index);
-        mBinding.playerText.setText(player[index]);
-    }
-
-    private void setDecode(View view) {
-        int index = Setting.getDecode();
-        Setting.putDecode(index = index == decode.length - 1 ? 0 : ++index);
-        mBinding.decodeText.setText(decode[index]);
-    }
-
-    private void setRender(View view) {
-        int index = Setting.getRender();
-        Setting.putRender(index = index == render.length - 1 ? 0 : ++index);
-        mBinding.renderText.setText(render[index]);
-    }
-
-    private void setScale(View view) {
-        int index = Setting.getScale();
-        Setting.putScale(index = index == scale.length - 1 ? 0 : ++index);
-        mBinding.scaleText.setText(scale[index]);
-    }
-
-    private void setSize(View view) {
-        int index = Setting.getSize();
-        Setting.putSize(index = index == size.length - 1 ? 0 : ++index);
-        mBinding.sizeText.setText(size[index]);
-        RefreshEvent.size();
+    private void onCustom(View view) {
+        SettingCustomActivity.start(this);
     }
 
     private void setDoh(View view) {
@@ -329,7 +287,7 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         Notify.progress(getActivity());
         Setting.putDoh(doh.toString());
         mBinding.dohText.setText(doh.getName());
-        ApiConfig.load(Config.vod(), getCallback());
+        VodConfig.load(Config.vod(), getCallback());
     }
 
     private void onProxy(View view) {
@@ -342,7 +300,7 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         Setting.putProxy(proxy);
         OkHttp.get().setProxy(proxy);
         Notify.progress(getActivity());
-        ApiConfig.load(Config.vod(), getCallback());
+        VodConfig.load(Config.vod(), getCallback());
         mBinding.proxyText.setText(UrlUtil.scheme(proxy));
     }
 

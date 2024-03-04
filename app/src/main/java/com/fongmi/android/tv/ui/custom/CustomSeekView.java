@@ -15,6 +15,8 @@ import androidx.media3.ui.TimeBar;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.player.Players;
 
+import java.util.concurrent.TimeUnit;
+
 public class CustomSeekView extends FrameLayout implements TimeBar.OnScrubListener {
 
     private static final int MAX_UPDATE_INTERVAL_MS = 1000;
@@ -24,7 +26,7 @@ public class CustomSeekView extends FrameLayout implements TimeBar.OnScrubListen
     private TextView durationView;
     private DefaultTimeBar timeBar;
 
-    private Runnable runnable;
+    private Runnable refresh;
     private Players player;
 
     private long currentDuration;
@@ -43,39 +45,28 @@ public class CustomSeekView extends FrameLayout implements TimeBar.OnScrubListen
     public CustomSeekView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         LayoutInflater.from(context).inflate(R.layout.view_control_seek, this);
-        initView();
-        initEvent();
+        init();
         start();
     }
 
-    private void initView() {
+    private void init() {
         positionView = findViewById(R.id.position);
         durationView = findViewById(R.id.duration);
         timeBar = findViewById(R.id.timeBar);
-        runnable = this::updateProgress;
-    }
-
-    private void initEvent() {
         timeBar.addListener(this);
+        refresh = this::refresh;
     }
 
     public void setListener(Players player) {
-        positionView.setText(player.stringToTime(0));
-        durationView.setText(player.stringToTime(0));
         this.player = player;
     }
 
-    private void seekToTimeBarPosition(long positionMs) {
-        player.seekTo(positionMs, true);
-        updateProgress();
+    private void start() {
+        removeCallbacks(refresh);
+        post(refresh);
     }
 
-    public void start() {
-        removeCallbacks(runnable);
-        post(runnable);
-    }
-
-    private void updateProgress() {
+    private void refresh() {
         if (player.isRelease()) return;
         long duration = player.getDuration();
         long position = player.getPosition();
@@ -87,6 +78,7 @@ public class CustomSeekView extends FrameLayout implements TimeBar.OnScrubListen
         currentPosition = position;
         currentBuffered = buffered;
         if (durationChanged) {
+            setKeyTimeIncrement(duration);
             timeBar.setDuration(duration);
             durationView.setText(player.stringToTime(duration < 0 ? 0 : duration));
         }
@@ -97,11 +89,35 @@ public class CustomSeekView extends FrameLayout implements TimeBar.OnScrubListen
         if (bufferedChanged) {
             timeBar.setBufferedPosition(buffered);
         }
-        removeCallbacks(runnable);
+        if (player.isEmpty()) {
+            timeBar.setPosition(0);
+            timeBar.setDuration(0);
+            positionView.setText("00:00");
+            durationView.setText("00:00");
+        }
+        removeCallbacks(refresh);
         if (player.isPlaying()) {
-            postDelayed(runnable, delayMs(position));
+            postDelayed(refresh, delayMs(position));
         } else {
-            postDelayed(runnable, MAX_UPDATE_INTERVAL_MS);
+            postDelayed(refresh, MAX_UPDATE_INTERVAL_MS);
+        }
+    }
+
+    private void setKeyTimeIncrement(long duration) {
+        if (duration > TimeUnit.HOURS.toMillis(2)) {
+            timeBar.setKeyTimeIncrement(TimeUnit.MINUTES.toMillis(5));
+        } else if (duration > TimeUnit.HOURS.toMillis(1)) {
+            timeBar.setKeyTimeIncrement(TimeUnit.MINUTES.toMillis(3));
+        } else if (duration > TimeUnit.MINUTES.toMillis(30)) {
+            timeBar.setKeyTimeIncrement(TimeUnit.MINUTES.toMillis(1));
+        } else if (duration > TimeUnit.MINUTES.toMillis(15)) {
+            timeBar.setKeyTimeIncrement(TimeUnit.SECONDS.toMillis(30));
+        } else if (duration > TimeUnit.MINUTES.toMillis(10)) {
+            timeBar.setKeyTimeIncrement(TimeUnit.SECONDS.toMillis(15));
+        } else if (duration > TimeUnit.MINUTES.toMillis(5)) {
+            timeBar.setKeyTimeIncrement(TimeUnit.SECONDS.toMillis(10));
+        } else if (duration > 0) {
+            timeBar.setKeyTimeIncrement(TimeUnit.SECONDS.toMillis(5));
         }
     }
 
@@ -112,10 +128,15 @@ public class CustomSeekView extends FrameLayout implements TimeBar.OnScrubListen
         return Util.constrainValue(delayMs, MIN_UPDATE_INTERVAL_MS, MAX_UPDATE_INTERVAL_MS);
     }
 
+    private void seekToTimeBarPosition(long positionMs) {
+        player.seekTo(positionMs);
+        refresh();
+    }
+
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        removeCallbacks(runnable);
+        removeCallbacks(refresh);
     }
 
     @Override

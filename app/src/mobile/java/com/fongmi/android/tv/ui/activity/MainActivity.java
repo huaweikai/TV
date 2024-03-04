@@ -1,22 +1,27 @@
 package com.fongmi.android.tv.ui.activity;
 
 import android.Manifest;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.MenuItem;
+import android.view.View;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.pm.ShortcutInfoCompat;
+import androidx.core.content.pm.ShortcutManagerCompat;
+import androidx.core.graphics.drawable.IconCompat;
 import androidx.fragment.app.Fragment;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Updater;
-import com.fongmi.android.tv.api.ApiConfig;
-import com.fongmi.android.tv.api.LiveConfig;
-import com.fongmi.android.tv.api.WallConfig;
+import com.fongmi.android.tv.api.config.LiveConfig;
+import com.fongmi.android.tv.api.config.VodConfig;
+import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.RestoreEvent;
 import com.fongmi.android.tv.databinding.ActivityMainBinding;
@@ -25,9 +30,11 @@ import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.event.ServerEvent;
 import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.player.Source;
+import com.fongmi.android.tv.receiver.ShortcutReceiver;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.FragmentStateManager;
+import com.fongmi.android.tv.ui.fragment.SettingCustomFragment;
 import com.fongmi.android.tv.ui.fragment.SettingFragment;
 import com.fongmi.android.tv.ui.fragment.SettingPlayerFragment;
 import com.fongmi.android.tv.ui.fragment.VodFragment;
@@ -59,8 +66,8 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        Updater.get().release().start(this);
         initFragment(savedInstanceState);
-        Updater.get().release().start();
         Server.get().start();
         initConfig();
     }
@@ -68,6 +75,7 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
     @Override
     protected void initEvent() {
         mBinding.navigation.setOnItemSelectedListener(this);
+        mBinding.navigation.findViewById(R.id.live).setOnLongClickListener(this::addShortcut);
     }
 
     private void checkAction(Intent intent) {
@@ -89,16 +97,17 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
                 if (position == 0) return VodFragment.newInstance();
                 if (position == 1) return SettingFragment.newInstance();
                 if (position == 2) return SettingPlayerFragment.newInstance();
+                if (position == 3) return SettingCustomFragment.newInstance();
                 return null;
             }
         };
         if (savedInstanceState == null) mManager.change(0);
     }
 
-    private void initConfig() {
+    public void initConfig() {
         WallConfig.get().init();
-        LiveConfig.get().init();
-        ApiConfig.get().init().load(getCallback());
+        LiveConfig.get().init().load();
+        VodConfig.get().init().load(getCallback());
     }
 
     private Callback getCallback() {
@@ -112,7 +121,7 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
 
             @Override
             public void error(String msg) {
-                if (TextUtils.isEmpty(msg) && AppDatabase.getBackupKey().exists()) onRestore();
+                if (TextUtils.isEmpty(msg) && AppDatabase.getBackup().exists()) onRestore();
                 else RefreshEvent.empty();
                 RefreshEvent.config();
                 Notify.show(msg);
@@ -124,7 +133,8 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
         PermissionX.init(this).permissions(Manifest.permission.WRITE_EXTERNAL_STORAGE).request((allGranted, grantedList, deniedList) -> AppDatabase.restore(new Callback() {
             @Override
             public void success() {
-                initConfig();
+                if (allGranted) initConfig();
+                else RefreshEvent.empty();
             }
         }));
     }
@@ -147,6 +157,13 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
     private boolean openLive() {
         LiveActivity.start(this);
         return false;
+    }
+
+    private boolean addShortcut(View view) {
+        ShortcutInfoCompat info = new ShortcutInfoCompat.Builder(this, getString(R.string.nav_live)).setIcon(IconCompat.createWithResource(this, R.mipmap.ic_launcher)).setIntent(new Intent(Intent.ACTION_VIEW, null, this, LiveActivity.class)).setShortLabel(getString(R.string.nav_live)).build();
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, new Intent(this, ShortcutReceiver.class).setAction(ShortcutReceiver.ACTION), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        ShortcutManagerCompat.requestPinShortcut(this, info, pendingIntent.getIntentSender());
+        return true;
     }
 
     private void setConfirm() {
@@ -191,10 +208,16 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
         RefreshEvent.video();
     }
 
+    protected boolean handleBack() {
+        return true;
+    }
+
     @Override
-    public void onBackPressed() {
+    protected void onBackPress() {
         if (!mBinding.navigation.getMenu().findItem(R.id.vod).isVisible()) {
             setNavigation();
+        } else if (mManager.isVisible(3)) {
+            change(1);
         } else if (mManager.isVisible(2)) {
             change(1);
         } else if (mManager.isVisible(1)) {
@@ -210,7 +233,7 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
         super.onDestroy();
         WallConfig.get().clear();
         LiveConfig.get().clear();
-        ApiConfig.get().clear();
+        VodConfig.get().clear();
         AppDatabase.backup();
         Source.get().exit();
         Server.get().stop();
